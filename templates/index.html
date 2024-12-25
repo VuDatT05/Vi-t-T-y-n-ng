@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="vi">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Trình Dịch Tiếng Việt ↔ Tày-Nùng</title>
+		<link rel="stylesheet" href="/style1.css" />
+		<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+	</head>
+	<body>
+		<header class="header">
+			<div class="grid"></div>
+			<!-- begin nav -->
+			<ul id="nav">
+				<li><a href="#">Trang chủ</a></li>
+				<li><a href="#band">Giới thiệu</a></li>
+				<li><a href="#tour">Lịch sử</a></li>
+				<li><a href="#contact">Văn hóa</a></li>
+				<li><a href="#more">Trang phục</a></li>
+			</ul>
+
+			<!-- end: nav -->
+		</header>
+		<div class="container">
+			<h1>Dịch Tiếng Việt ↔ Tày-Nùng</h1>
+
+			<!-- Bộ chọn chế độ dịch -->
+			<div class="language-toggle">
+				<span id="language-from">Tiếng Việt</span>
+				<button id="switch-button">↔</button>
+				<span id="language-to">Tày/Nùng</span>
+			</div>
+
+			<!-- Ô nhập văn bản -->
+			<div class="input-group">
+				<textarea
+					id="text_input"
+					placeholder="Nhập văn bản cần dịch..."
+				></textarea>
+				<div id="suggestions" class="suggestions"></div>
+			</div>
+
+			<!-- Nút dịch -->
+			<button id="translate-button">Dịch</button>
+
+			<!-- Ô kết quả -->
+			<div class="output-group">
+				<h3>Kết quả dịch:</h3>
+				<textarea id="result" readonly></textarea>
+			</div>
+		</div>
+
+		<script>
+			$(document).ready(function () {
+				let currentMode = "vn_to_tn";
+
+				// Chuyển đổi chế độ dịch
+				$("#switch-button").click(function () {
+					if (currentMode === "vn_to_tn") {
+						currentMode = "tn_to_vn";
+						$("#language-from").text("Tày/Nùng");
+						$("#language-to").text("Tiếng Việt");
+					} else {
+						currentMode = "vn_to_tn";
+						$("#language-from").text("Tiếng Việt");
+						$("#language-to").text("Tày/Nùng");
+					}
+
+					// Xóa gợi ý khi chuyển chế độ
+					$("#suggestions").empty().hide();
+				});
+
+				// Xử lý nút dịch
+				$("#translate-button").click(function () {
+					let text = $("#text_input").val().trim();
+
+					if (text === "") {
+						alert("Vui lòng nhập văn bản cần dịch!");
+						return;
+					}
+
+					$.ajax({
+						url: "/",
+						type: "POST",
+						data: {
+							text_input: text,
+							mode: currentMode,
+						},
+						success: function (response) {
+							if (response.ket_qua) {
+								$("#result").val(response.ket_qua);
+							} else {
+								$("#result").val("Lỗi: Không nhận được kết quả từ server.");
+							}
+						},
+						error: function () {
+							$("#result").val("Lỗi: Không thể kết nối đến server.");
+						},
+					});
+				});
+
+				// Xử lý gợi ý
+				$("#text_input").on("input", function () {
+					let query = $(this).val().trim();
+
+					if (query.length > 0) {
+						$.getJSON(
+							"/suggest?q=" + query + "&mode=" + currentMode,
+							function (data) {
+								let suggestions = data.suggestions;
+								let suggestionHtml = "";
+								suggestions.forEach(function (suggestion) {
+									suggestionHtml += `<div class='suggestion-item'>${suggestion}</div>`;
+								});
+								$("#suggestions").html(suggestionHtml).addClass("show");
+							}
+						);
+					} else {
+						$("#suggestions").removeClass("show");
+					}
+				});
+
+				// Chọn gợi ý
+				$(document).on("click", ".suggestion-item", function () {
+					$("#text_input").val($(this).text());
+					$("#suggestions").removeClass("show");
+				});
+
+				// Ẩn gợi ý khi click bên ngoài
+				$(document).on("click", function (e) {
+					if (!$(e.target).closest("#suggestions, #text_input").length) {
+						$("#suggestions").removeClass("show");
+					}
+				});
+			});
+		</script>
+	</body>
+</html>
